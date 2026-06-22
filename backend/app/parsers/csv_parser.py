@@ -6,8 +6,10 @@ from typing import List, Optional, Dict, Any
 from app.parsers.base import RawTransaction
 from app.models.enums import TransactionType
 from app.schemas.session import ColumnMapping
+from app.parsers.common import preprocess_csv_bytes, parse_date
 
 def find_header_row_index(file_content: bytes) -> int:
+    file_content = preprocess_csv_bytes(file_content)
     try:
         lines = file_content.decode('utf-8').splitlines()
     except Exception:
@@ -24,10 +26,12 @@ def find_header_row_index(file_content: bytes) -> int:
             return i
     return 0
 
-def parse_generic_csv(file_content: bytes) -> List[TransactionBase]:
+def parse_generic_csv(file_content: bytes) -> List[RawTransaction]:
+    file_content = preprocess_csv_bytes(file_content)
     header_idx = find_header_row_index(file_content)
     try:
         df = pd.read_csv(io.BytesIO(file_content), skiprows=header_idx)
+
     except Exception as e:
         raise ValueError(f"Failed to read CSV: {str(e)}")
     
@@ -50,12 +54,8 @@ def parse_generic_csv(file_content: bytes) -> List[TransactionBase]:
             continue
             
         date_str = str(row[date_col]).strip()
-        try:
-            parsed_date = pd.to_datetime(date_str, dayfirst=True)
-            if parsed_date.year < 1900 or parsed_date.year > 2100:
-                continue
-            parsed_date_str = parsed_date.strftime('%Y-%m-%d')
-        except Exception:
+        parsed_date_str = parse_date(date_str)
+        if not parsed_date_str:
             continue
 
         desc_raw = str(row[desc_col]).strip()
@@ -197,8 +197,9 @@ def suggest_column_mapping(columns: List[str]) -> tuple[ColumnMapping, float]:
     
     return mapping, confidence_score
 
-def parse_csv_with_mapping(file_content: bytes, column_mapping: ColumnMapping, header_row: int = 0) -> List[TransactionBase]:
+def parse_csv_with_mapping(file_content: bytes, column_mapping: ColumnMapping, header_row: int = 0) -> List[RawTransaction]:
     """Parse CSV using explicit column mapping."""
+    file_content = preprocess_csv_bytes(file_content)
     try:
         df = pd.read_csv(io.BytesIO(file_content), skiprows=header_row)
     except Exception as e:
@@ -251,12 +252,8 @@ def parse_csv_with_mapping(file_content: bytes, column_mapping: ColumnMapping, h
             continue
             
         date_str = str(row[date_col]).strip()
-        try:
-            parsed_date = pd.to_datetime(date_str, dayfirst=True)
-            if parsed_date.year < 1900 or parsed_date.year > 2100:
-                continue
-            parsed_date_str = parsed_date.strftime('%Y-%m-%d')
-        except Exception:
+        parsed_date_str = parse_date(date_str)
+        if not parsed_date_str:
             continue
 
         desc_raw = str(row[desc_col]).strip()
@@ -323,6 +320,7 @@ def parse_csv_with_mapping(file_content: bytes, column_mapping: ColumnMapping, h
 
 def preview_csv(file_content: bytes) -> Dict[str, Any]:
     """Preview CSV structure and suggest column mapping."""
+    file_content = preprocess_csv_bytes(file_content)
     header_idx = find_header_row_index(file_content)
     
     try:

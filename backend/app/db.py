@@ -40,18 +40,29 @@ def _migrate_sqlite_schema() -> None:
     from sqlalchemy import inspect, text
 
     inspector = inspect(engine)
-    if not inspector.has_table("transactions"):
-        return
+    
+    # Migrate transactions table
+    if inspector.has_table("transactions"):
+        existing_tx = {col["name"] for col in inspector.get_columns("transactions")}
+        tx_migrations = {
+            "category_overridden": "ALTER TABLE transactions ADD COLUMN category_overridden BOOLEAN NOT NULL DEFAULT 0",
+        }
+        with engine.begin() as conn:
+            for column, ddl in tx_migrations.items():
+                if column not in existing_tx:
+                    conn.execute(text(ddl))
 
-    existing = {col["name"] for col in inspector.get_columns("transactions")}
-    migrations = {
-        "category_overridden": "ALTER TABLE transactions ADD COLUMN category_overridden BOOLEAN NOT NULL DEFAULT 0",
-    }
-
-    with engine.begin() as conn:
-        for column, ddl in migrations.items():
-            if column not in existing:
-                conn.execute(text(ddl))
+    # Migrate upload_sessions table
+    if inspector.has_table("upload_sessions"):
+        existing_sessions = {col["name"] for col in inspector.get_columns("upload_sessions")}
+        sessions_migrations = {
+            "parse_warnings": "ALTER TABLE upload_sessions ADD COLUMN parse_warnings TEXT",
+            "row_count": "ALTER TABLE upload_sessions ADD COLUMN row_count INTEGER NOT NULL DEFAULT 0",
+        }
+        with engine.begin() as conn:
+            for column, ddl in sessions_migrations.items():
+                if column not in existing_sessions:
+                    conn.execute(text(ddl))
 
 
 def init_db() -> None:

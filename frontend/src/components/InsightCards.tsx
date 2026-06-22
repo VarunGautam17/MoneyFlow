@@ -13,17 +13,20 @@ export default function InsightCards({ insights }: InsightCardsProps) {
       {insights.map((insight, index) => (
         <div
           key={index}
-          className="rounded-xl border border-brand-100 bg-brand-50 p-5 text-sm leading-relaxed text-slate-800"
+          className="bg-zinc-900/40 border border-zinc-800 hover:border-zinc-700/80 rounded-2xl p-5 text-sm leading-relaxed text-zinc-300 transition duration-300 flex gap-3.5"
         >
-          <span className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brand-700">
-            Insight {index + 1}
-            {insight.source === "ai" && (
-              <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-bold text-purple-700">
-                AI
-              </span>
-            )}
-          </span>
-          {insight.text}
+          <span className="text-indigo-400 text-xl select-none pt-0.5">✦</span>
+          <div>
+            <div className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              Insight {index + 1}
+              {insight.source === "ai" && (
+                <span className="rounded bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 text-[9px] font-bold text-indigo-400">
+                  AI
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-zinc-300 leading-relaxed">{insight.text}</p>
+          </div>
         </div>
       ))}
     </div>

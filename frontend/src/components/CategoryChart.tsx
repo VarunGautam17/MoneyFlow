@@ -47,7 +47,7 @@ export default function CategoryChart({ analytics }: CategoryChartProps) {
 
   if (data.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500">
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-950/40 text-zinc-500 italic">
         No spending data to chart
       </div>
     );
@@ -56,7 +56,7 @@ export default function CategoryChart({ analytics }: CategoryChartProps) {
   const chartHeight = Math.max(240, data.length * 36 + 32);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 shadow-xl">
       <ResponsiveContainer width="100%" height={chartHeight}>
         <BarChart
           data={data}
@@ -68,14 +68,16 @@ export default function CategoryChart({ analytics }: CategoryChartProps) {
             type="category"
             dataKey="name"
             width={96}
-            tick={{ fontSize: 12, fill: "#334155" }}
+            tick={{ fontSize: 12, fill: "#a1a1aa" }}
             axisLine={false}
             tickLine={false}
           />
           <Tooltip
             formatter={(value) => formatINR(Number(value ?? 0))}
             labelFormatter={(label) => String(label)}
-            contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0" }}
+            contentStyle={{ backgroundColor: "#18181b", borderColor: "#27272a", borderRadius: "12px" }}
+            itemStyle={{ color: "#f4f4f5" }}
+            labelStyle={{ color: "#f4f4f5", fontWeight: "bold" }}
           />
           <Bar dataKey="value" name="Spend" barSize={22} radius={[0, 4, 4, 0]}>
             {data.map((entry, index) => (
@@ -85,12 +87,12 @@ export default function CategoryChart({ analytics }: CategoryChartProps) {
               dataKey="percent"
               position="right"
               formatter={(v) => `${Number(v).toFixed(0)}%`}
-              style={{ fill: "#64748b", fontSize: 12 }}
+              style={{ fill: "#a1a1aa", fontSize: 12, fontWeight: "bold" }}
             />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-      <p className="mt-2 text-center text-xs text-slate-500">
+      <p className="mt-2 text-center text-xs text-zinc-500 font-medium">
         Total spend {formatINR(total)} · hover a bar for exact amount
       </p>
     </div>

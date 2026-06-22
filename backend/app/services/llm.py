@@ -23,12 +23,24 @@ logger = logging.getLogger(__name__)
 LLM_CONFIDENCE = 0.78
 VALID_CATEGORIES = {c.value for c in Category}
 
-# Compact system prompt to conserve the 1K TPM budget
+# System prompt tuned for Indian personal finance transactions
 CATEGORIZATION_SYSTEM_PROMPT = (
-    "Categorize Indian bank txns. JSON only: "
-    '{"transactions":[{"id":"…","category":"Food","confidence":0.8}]} '
-    "Categories: Food, Travel, Shopping, Bills, EMI, Subscriptions, "
-    "Salary, Rent, Investments, Other."
+    "You are an expert Indian personal finance assistant. "
+    "Categorize each bank transaction into exactly one category. "
+    "Return ONLY valid JSON, no markdown, no explanation. "
+    'Format: {"transactions":[{"id":"…","category":"Food","confidence":0.9}]} '
+    "\n\nCategories and examples:\n"
+    "- Food: restaurants, cafes, food delivery (Swiggy/Zomato), groceries, kirana stores, dairy\n"
+    "- Travel: Uber/Ola/Rapido cabs, metro, trains (IRCTC), flights, petrol/fuel, toll, bus\n"
+    "- Shopping: Amazon, Flipkart, Myntra, AJIO, malls, retail stores, fashion, electronics\n"
+    "- Bills: electricity, water, gas, internet, mobile recharge, insurance premiums, DTH\n"
+    "- EMI: loan repayments, NACH/ECS debits, home/car/personal loan installments\n"
+    "- Subscriptions: Netflix, Spotify, Hotstar, gym memberships, annual/monthly memberships\n"
+    "- Salary: salary credits, payroll, freelance/consulting payments received\n"
+    "- Rent: house/flat rent, PG accommodation, NobrokerHood payments\n"
+    "- Investments: SIP, mutual funds, stocks, Zerodha/Groww/Upstox, FD/RD deposits\n"
+    "- Other: ATM withdrawals, bank charges, transfers, unrecognised transactions\n"
+    "\nRule: If the description mentions a restaurant, hotel dining, or food brand — always use Food."
 )
 
 
@@ -99,8 +111,8 @@ class GroqLLMService:
                     {"role": "user", "content": user_prompt},
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.1,
-                max_tokens=120,
+                temperature=0.05,
+                max_tokens=400,
             )
             usage = response.usage
             if usage and usage.total_tokens:

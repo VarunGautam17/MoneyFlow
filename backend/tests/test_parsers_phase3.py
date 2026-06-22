@@ -59,3 +59,17 @@ def test_upload_generic_fixture(client: TestClient):
     session_id = response.json()["session_id"]
     session = client.get(f"/api/v1/sessions/{session_id}")
     assert session.json()["status"] == "ready"
+
+
+def test_preprocess_csv_bytes():
+    from app.parsers.common import preprocess_csv_bytes
+
+    # Test wrapped CSV content
+    wrapped = b'"Date,Description,Transaction_Type,Debit,Credit,Balance"\r\n"2026-01-02,Opening Balance,CR,0.00,5000.00,5000.00"'
+    unwrapped = preprocess_csv_bytes(wrapped)
+    assert unwrapped == b'Date,Description,Transaction_Type,Debit,Credit,Balance\n2026-01-02,Opening Balance,CR,0.00,5000.00,5000.00'
+
+    # Test normal CSV content is untouched
+    normal = b'"2026-01-02",Opening Balance,CR,0.00,5000.00,5000.00'
+    assert preprocess_csv_bytes(normal) == normal
+

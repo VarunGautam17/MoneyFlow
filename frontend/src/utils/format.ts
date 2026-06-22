@@ -19,14 +19,14 @@ export function formatINR(amount: number): string {
 }
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  Food: "bg-orange-100 text-orange-800",
-  Travel: "bg-blue-100 text-blue-800",
-  Shopping: "bg-pink-100 text-pink-800",
-  Bills: "bg-yellow-100 text-yellow-800",
-  EMI: "bg-red-100 text-red-800",
-  Subscriptions: "bg-purple-100 text-purple-800",
-  Salary: "bg-green-100 text-green-800",
-  Rent: "bg-indigo-100 text-indigo-800",
-  Investments: "bg-teal-100 text-teal-800",
-  Other: "bg-slate-100 text-slate-700",
+  Food: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  Travel: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+  Shopping: "bg-pink-500/10 text-pink-400 border border-pink-500/20",
+  Bills: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
+  EMI: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  Subscriptions: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  Salary: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  Rent: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
+  Investments: "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+  Other: "bg-zinc-800/60 text-zinc-400 border border-zinc-700/50",
 };

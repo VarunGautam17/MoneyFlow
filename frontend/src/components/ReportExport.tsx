@@ -41,18 +41,18 @@ export default function ReportExport({ sessionId }: ReportExportProps) {
         type="button"
         onClick={downloadPdf}
         disabled={downloading}
-        className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        className="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 hover:shadow-[0_0_15px_rgba(99,102,241,0.4)] text-white transition duration-200 cursor-pointer disabled:opacity-60"
       >
         {downloading ? "Generating PDF…" : "Download PDF"}
       </button>
       <button
         type="button"
         onClick={openPrintView}
-        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        className="px-4 py-2 rounded-xl text-sm font-semibold bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 transition duration-200 cursor-pointer"
       >
         Print / Share
       </button>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-rose-400 font-medium">{error}</p>}
     </div>
   );
 }

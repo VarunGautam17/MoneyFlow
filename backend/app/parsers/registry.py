@@ -5,6 +5,7 @@ from app.parsers.excel_loader import xlsx_to_csv_bytes
 from app.parsers.generic import generic_parser
 from app.parsers.hdfc import hdfc_parser
 from app.parsers.icici import icici_parser
+from app.parsers.common import preprocess_csv_bytes
 
 PARSERS: list[StatementParser] = [hdfc_parser, icici_parser, generic_parser]
 
@@ -15,6 +16,8 @@ UNSUPPORTED_MESSAGE = (
 
 
 def get_parser(filename: str, content: bytes) -> StatementParser | None:
+    if filename.lower().endswith(".csv"):
+        content = preprocess_csv_bytes(content)
     sample = content[:4096]
     for parser in PARSERS:
         if parser.can_parse(filename, sample):
@@ -26,7 +29,9 @@ def parse_statement(file: BinaryIO, filename: str, content: bytes) -> tuple[Pars
     normalized_filename = filename
     normalized_content = content
 
-    if filename.lower().endswith(".xlsx"):
+    if filename.lower().endswith(".csv"):
+        normalized_content = preprocess_csv_bytes(content)
+    elif filename.lower().endswith(".xlsx"):
         try:
             normalized_content = xlsx_to_csv_bytes(content)
             normalized_filename = filename.rsplit(".", 1)[0] + ".csv"
@@ -44,3 +49,4 @@ def parse_statement(file: BinaryIO, filename: str, content: bytes) -> tuple[Pars
         file_obj = io.BytesIO(normalized_content)
 
     return parser.parse(file_obj, normalized_filename), parser
+

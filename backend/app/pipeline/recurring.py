@@ -9,11 +9,11 @@ from statistics import median
 from app.models.enums import Category
 from app.pipeline.cleaner import CleanedTransaction
 
-MONTHLY_MIN_DAYS = 28
-MONTHLY_MAX_DAYS = 32
-AMOUNT_TOLERANCE = 0.05
+MONTHLY_MIN_DAYS = 25
+MONTHLY_MAX_DAYS = 35
+AMOUNT_TOLERANCE = 0.20
 MIN_OCCURRENCES = 2
-SIMILARITY_THRESHOLD = 0.55
+SIMILARITY_THRESHOLD = 0.65
 
 
 @dataclass
@@ -40,7 +40,13 @@ def _similarity(a: str, b: str) -> float:
         jaccard = len(ta & tb) / len(ta | tb)
         if jaccard >= SIMILARITY_THRESHOLD:
             return jaccard
-    return SequenceMatcher(None, a.upper(), b.upper()).ratio()
+    
+    # Only fall back to SequenceMatcher if the string similarity ratio is extremely high
+    # to prevent unrelated descriptions matching on generic words like "BILL" or "PURCHASE"
+    ratio = SequenceMatcher(None, a.upper(), b.upper()).ratio()
+    if ratio >= 0.82:
+        return ratio
+    return 0.0
 
 
 def _group_key(txn: CleanedTransaction) -> str:

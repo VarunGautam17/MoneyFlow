@@ -71,7 +71,9 @@ def test_rate_limiter_window_resets_after_minute():
 
 
 def test_token_aware_batches_stay_under_per_request_cap():
-    settings = Settings(groq_max_tokens_per_request=200, groq_max_description_chars=48)
+    # Use 600 token cap — the expanded system prompt baseline is ~350 tokens,
+    # so a 600-token cap forces multi-batch splitting with ample room per item.
+    settings = Settings(groq_max_tokens_per_request=600, groq_max_description_chars=48)
     service = GroqLLMService(settings)
 
     items = [(f"id-{i}", _txn(f"VENDOR NUMBER {i} LONG DESCRIPTION TEXT")) for i in range(20)]
