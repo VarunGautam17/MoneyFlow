@@ -6,6 +6,7 @@ class Category(StrEnum):
     TRAVEL = "Travel"
     SHOPPING = "Shopping"
     BILLS = "Bills"
+    CREDIT_CARD = "Credit Card"
     EMI = "EMI"
     SUBSCRIPTIONS = "Subscriptions"
     SALARY = "Salary"

@@ -5,6 +5,7 @@ export const CATEGORIES = [
   "Travel",
   "Shopping",
   "Bills",
+  "Credit Card",
   "EMI",
   "Subscriptions",
   "Salary",

@@ -147,7 +147,7 @@ export default function FileUpload({ onUploaded, onError }: FileUploadProps) {
             <div className="space-y-2">
               <p className="text-zinc-200 font-semibold text-lg">Drop your bank statement here</p>
               <p className="text-zinc-500 text-sm">
-                HDFC · ICICI · Generic CSV · Excel (.xlsx) · max 10 MB
+                Bank Statement in CSV/Excel Format (.xlsx) · max 10 MB
               </p>
             </div>
 

@@ -36,6 +36,14 @@ CATEGORY_RULES: list[tuple[re.Pattern[str], Category]] = [
         re.I,
     ), Category.SALARY),
 
+    # ── Credit Card repayment ────────────────────────────────────────────────
+    # Matches: "CRED" (whole word), "CHEQ", "CC BILL", "CC PAYMENT"
+    # Does NOT match: "CREDIT", "CREDITED", "UPI CREDIT" (credit = incoming money)
+    (re.compile(
+        r"(?:\bCRED\b|\bCHEQ\b|\bCC\s+BILL\b|\bCC\s+PAYMENT\b|\bCREDIT\s+CARD\s+BILL\b|\bCREDIT\s+CARD\s+PAYMENT\b)",
+        re.I,
+    ), Category.CREDIT_CARD),
+
     # ── Food & Groceries ────────────────────────────────────────────────────
     (re.compile(
         r"\b(SWIGGY|ZOMATO|DOMINOS?|PIZZA HUT|PIZZAHUT|KFC|MCDONALDS?|MCD"
@@ -98,7 +106,7 @@ CATEGORY_RULES: list[tuple[re.Pattern[str], Category]] = [
         r"\b(HOME LOAN|CAR LOAN|VEHICLE LOAN|PERSONAL LOAN|EDUCATION LOAN"
         r"|STUDY LOAN|BAJAJ FINANCE|BAJAJ FINSERV|EMI|LOAN|MORTGAGE"
         r"|INSTALLMENT|INSTALMENT|REPAYMENT|NACH DEBIT|ECS DEBIT|SI DEBIT"
-        r"|STANDING INSTRUCTION)\b",
+        r"|STANDING INSTRUCTION|ACH|ACH DEBIT)\b",
         re.I,
     ), Category.EMI),
 
