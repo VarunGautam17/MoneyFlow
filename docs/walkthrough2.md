@@ -5,20 +5,20 @@ We have successfully completed all Phase 2 features (Intelligence & Detection) a
 ## Changes Made
 
 ### 1. Database Model & Schema updates
-- Created the [RecurringGroup](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/backend/app/models.py) database model.
+- Created the [RecurringGroup](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/backend/app/models.py) database model.
 - Added relationship and ForeignKey constraints between transactions and recurring groups.
-- Exposed `recurring_group_id` on the Pydantic schemas in [schemas.py](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/backend/app/schemas.py).
+- Exposed `recurring_group_id` on the Pydantic schemas in [schemas.py](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/backend/app/schemas.py).
 
 ### 2. Recurring Payment Detection
-- Created [recurring.py](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/backend/app/pipeline/recurring.py) implementing a detection engine:
+- Created [recurring.py](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/backend/app/pipeline/recurring.py) implementing a detection engine:
   - Groups transactions using `difflib.SequenceMatcher` to do fuzzy matching on merchant names (excluding frequent non-subscription categories like *Food*, *Travel*, *Shopping*).
   - Identifies intervals between 25 and 35 days (covering monthly cadences).
   - Enforces amount changes are within ±5% tolerance.
   - Determines confidence based on the size of the recurring series.
-- Integrated the detection logic in `process_upload_task` in [upload.py](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/backend/app/api/routes/upload.py) to save recurring groups and link transactions on CSV ingestion.
+- Integrated the detection logic in `process_upload_task` in [upload.py](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/backend/app/api/routes/upload.py) to save recurring groups and link transactions on CSV ingestion.
 
 ### 3. API Endpoints
-- Implemented `GET /api/v1/sessions/{session_id}/recurring` in [sessions.py](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/backend/app/api/routes/sessions.py) to retrieve detected subscription groups and EMIs.
+- Implemented `GET /api/v1/sessions/{session_id}/recurring` in [sessions.py](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/backend/app/api/routes/sessions.py) to retrieve detected subscription groups and EMIs.
 - Implemented `PATCH /api/v1/sessions/{session_id}/transactions/{txn_id}` to allow category overrides:
   - Updates the transaction category and sets confidence to 1.0.
   - Deletes and regenerates recurring groups for the session based on the updated transactions.
@@ -26,7 +26,7 @@ We have successfully completed all Phase 2 features (Intelligence & Detection) a
 
 ### 4. Interactive Frontend Dashboard
 - Installed `recharts` for charts rendering.
-- Implemented a clean tabbed layout in [App.tsx](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/frontend/src/App.tsx):
+- Implemented a clean tabbed layout in [App.tsx](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/frontend/src/App.tsx):
   - **Dashboard**: Displays high-level stats, a Bar Chart for Monthly Spend trends, and a Pie Chart for Category Distribution.
   - **Transactions Ledger**: Displays all transactions with search, category filters, a "This Month" filter checkbox, and inline select dropdowns to update categories. Shows an "Edited" badge next to manual overrides.
   - **Recurring Payments**: Lists detected subscription and EMI groups with typical monthly amounts, confidence scores, and individual payment dates.

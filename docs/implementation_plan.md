@@ -1,6 +1,6 @@
-# RupeeRadar Phase-wise Implementation Plan
+# MoneyFlow Phase-wise Implementation Plan
 
-This document outlines the phase-wise implementation plan for **RupeeRadar**, an AI-powered personal finance assistant. The plan is derived directly from the architecture specifications and focuses on delivering a working end-to-end prototype progressively.
+This document outlines the phase-wise implementation plan for **MoneyFlow**, an AI-powered personal finance assistant. The plan is derived directly from the architecture specifications and focuses on delivering a working end-to-end prototype progressively.
 
 ## User Review Required
 
@@ -195,7 +195,7 @@ The final phase prepares the application for demonstration and sharing.
 
 ## Phase 4: Production Deployment
 
-This section details the deployment configuration to launch RupeeRadar in production using **Railway** for the backend and **Vercel** for the frontend.
+This section details the deployment configuration to launch MoneyFlow in production using **Railway** for the backend and **Vercel** for the frontend.
 
 ### 1. Backend Deployment (Railway)
 * **Build Mechanism**: Railway will build the backend using `backend/Dockerfile` automatically when linked to your repository.
@@ -203,7 +203,7 @@ This section details the deployment configuration to launch RupeeRadar in produc
   * Since containers are ephemeral, you must mount a persistent volume.
   * In Railway settings, add a new **Volume** resource and mount it to `/data` in the backend service configuration.
 * **Environment Variables**:
-  * Set `DATABASE_URL=sqlite:////data/rupeeradar.db` (pointing to the persistent volume mount path).
+  * Set `DATABASE_URL=sqlite:////data/MoneyFlow.db` (pointing to the persistent volume mount path).
   * Set `GROQ_API_KEY` (your Groq API key).
   * Set `GROQ_MODEL=llama-3.3-70b-versatile`.
   * Set `CORS_ORIGINS=*` (or restrict it to your Vercel frontend domain).
@@ -216,7 +216,7 @@ This section details the deployment configuration to launch RupeeRadar in produc
   * Build Command: `npm run build`
   * Output Directory: `dist`
 * **API Routing Rewrite**:
-  * We created [vercel.json](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/frontend/vercel.json) in the `frontend` directory containing:
+  * We created [vercel.json](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/frontend/vercel.json) in the `frontend` directory containing:
     ```json
     {
       "rewrites": [

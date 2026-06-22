@@ -45,7 +45,7 @@ def build_report_context(db: Session, session: UploadSession) -> dict:
     groups = db.query(RecurringGroup).filter(RecurringGroup.session_id == session.id).all()
 
     return {
-        "title": "RupeeRadar Spending Report",
+        "title": "MoneyFlow💸🌊 Spending Report",
         "generated_at": datetime.now(timezone.utc).strftime("%d %b %Y, %H:%M UTC"),
         "filename": session.filename,
         "period_start": metrics.period_start,

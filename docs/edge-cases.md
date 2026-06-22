@@ -1,6 +1,6 @@
-# RupeeRadar — Edge Cases & Corner Cases
+# MoneyFlow — Edge Cases & Corner Cases
 
-This document catalogs known edge cases, ambiguous inputs, and failure scenarios for RupeeRadar. It is derived from [architecture.md](./architecture.md) and [implementation-plan.md](./implementation-plan.md) and should guide parser design, pipeline robustness, test fixtures, and UX error handling.
+This document catalogs known edge cases, ambiguous inputs, and failure scenarios for MoneyFlow. It is derived from [architecture.md](./architecture.md) and [implementation-plan.md](./implementation-plan.md) and should guide parser design, pipeline robustness, test fixtures, and UX error handling.
 
 Each entry includes:
 - **Example** — representative input or condition

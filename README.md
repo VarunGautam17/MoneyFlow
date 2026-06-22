@@ -1,4 +1,4 @@
-# RupeeRadar
+# MoneyFlow💸🌊
 
 AI-powered personal finance assistant that analyzes Indian bank statements and surfaces spending insights.
 
@@ -82,7 +82,7 @@ Download a starter template: [docs/sample-statement-template.csv](docs/sample-st
 ## Project Structure
 
 ```
-rupee-radar/
+moneyflow/
 ├── backend/          # FastAPI API + processing pipeline
 ├── frontend/         # React dashboard
 ├── docs/             # Context, architecture, implementation plan
@@ -93,7 +93,7 @@ rupee-radar/
 
 - **Amounts:** debits are negative, credits positive
 - **Dates:** ISO 8601 (`YYYY-MM-DD`)
-- **Categories:** Food, Travel, Shopping, Bills, EMI, Subscriptions, Salary, Rent, Investments, Other
+- **Categories:** Food, Travel, Shopping, Bills, Credit Card, EMI, Subscriptions, Salary, Rent, Investments, Other
 
 ## Sample Data
 

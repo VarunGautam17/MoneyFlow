@@ -1,8 +1,8 @@
-# RupeeRadar — Project Context
+# MoneyFlow — Project Context
 
 ## Overview
 
-**RupeeRadar** is an AI-powered personal finance assistant that helps working professionals understand where their money is going by analyzing bank statement data.
+**MoneyFlow** is an AI-powered personal finance assistant that helps working professionals understand where their money is going by analyzing bank statement data.
 
 The goal is an end-to-end solution that converts raw financial transaction data into meaningful personal finance insights.
 

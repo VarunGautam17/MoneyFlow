@@ -28,7 +28,7 @@ export default function HomePage() {
             </div>
             <div className="flex items-center">
               <span className="font-bold text-lg tracking-tight pb-0.5 bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent font-display">
-                RupeeRadar
+                MoneyFlow💸🌊
               </span>
             </div>
           </div>
@@ -87,7 +87,7 @@ export default function HomePage() {
 
       <footer className="border-t border-zinc-900 bg-zinc-950 py-6 text-center text-xs text-zinc-600 mt-auto">
         <div className="max-w-7xl mx-auto px-4">
-          <p>© {new Date().getFullYear()} RupeeRadar. Scan and categorize personal finances locally & securely.</p>
+          <p>© {new Date().getFullYear()} MoneyFlow💸🌊. Scan and categorize personal finances locally & securely.</p>
         </div>
       </footer>
     </div>

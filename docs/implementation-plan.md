@@ -1,6 +1,6 @@
-# RupeeRadar — Phase-Wise Implementation Plan
+# MoneyFlow — Phase-Wise Implementation Plan
 
-This document is the execution plan for building RupeeRadar, derived from [architecture.md](./architecture.md) and [context.md](./context.md). Work is organized into **three phases**, each delivering a demoable increment. Tasks within a phase are ordered by dependency; parallel work is noted where possible.
+This document is the execution plan for building MoneyFlow, derived from [architecture.md](./architecture.md) and [context.md](./context.md). Work is organized into **three phases**, each delivering a demoable increment. Tasks within a phase are ordered by dependency; parallel work is noted where possible.
 
 ---
 

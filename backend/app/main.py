@@ -17,7 +17,7 @@ async def lifespan(_: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
-        title="RupeeRadar API",
+        title="MoneyFlow API",
         description="AI-powered personal finance assistant for Indian bank statements",
         version="0.1.0",
         lifespan=lifespan,

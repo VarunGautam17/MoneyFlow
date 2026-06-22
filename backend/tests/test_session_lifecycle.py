@@ -42,5 +42,5 @@ def test_report_html_endpoint(client: TestClient):
     response = client.get(f"/api/v1/sessions/{session_id}/report?format=html")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert "RupeeRadar" in response.text
+    assert "MoneyFlow" in response.text
     assert "₹" in response.text

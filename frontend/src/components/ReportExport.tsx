@@ -21,7 +21,7 @@ export default function ReportExport({ sessionId }: ReportExportProps) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `rupeeradar-report-${sessionId.slice(0, 8)}.pdf`;
+      link.download = `moneyflow-report-${sessionId.slice(0, 8)}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {

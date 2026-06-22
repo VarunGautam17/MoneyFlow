@@ -1,4 +1,4 @@
-# RupeeRadar Edge Cases & Corner Cases
+# MoneyFlow Edge Cases & Corner Cases
 
 This document outlines potential edge cases and corner cases identified during the architecture and implementation planning phases. Handling these robustly is critical for a smooth user experience.
 

@@ -1,6 +1,6 @@
-# RupeeRadar — System Architecture
+# MoneyFlow — System Architecture
 
-This document describes the technical architecture for RupeeRadar, an AI-powered personal finance assistant. It is derived from [context.md](./context.md) and defines how raw bank statement data flows through the system to produce categorized transactions, recurring-payment detection, financial metrics, and human-readable insights.
+This document describes the technical architecture for MoneyFlow, an AI-powered personal finance assistant. It is derived from [context.md](./context.md) and defines how raw bank statement data flows through the system to produce categorized transactions, recurring-payment detection, financial metrics, and human-readable insights.
 
 ---
 
@@ -19,7 +19,7 @@ This document describes the technical architecture for RupeeRadar, an AI-powered
 
 ## 2. High-Level System View
 
-RupeeRadar is organized as a **pipeline-oriented, modular monolith** for the prototype phase. A single application hosts ingestion, processing, analytics, and presentation. This keeps deployment simple while preserving clear module boundaries for future extraction into services.
+MoneyFlow is organized as a **pipeline-oriented, modular monolith** for the prototype phase. A single application hosts ingestion, processing, analytics, and presentation. This keeps deployment simple while preserving clear module boundaries for future extraction into services.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐

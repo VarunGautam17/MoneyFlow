@@ -1,8 +1,8 @@
-AI Challenge Problem Statement: RupeeRadar
+AI Challenge Problem Statement: MoneyFlow
 Background
 Working professionals often make hundreds of monthly transactions across UPI, cards, bank transfers, subscriptions, EMIs, rent, shopping, food delivery, travel, and investments. Although bank statements contain all this information, they are difficult to understand because transaction descriptions are messy, inconsistent, and hard to categorize manually.
 Challenge
-Build RupeeRadar, an AI-powered personal finance assistant that helps users understand where their money is going by analyzing their bank statement data.
+Build MoneyFlow, an AI-powered personal finance assistant that helps users understand where their money is going by analyzing their bank statement data.
 The application should allow a user to upload bank statement data, extract and clean transactions, categorize expenses, detect recurring payments, generate spending insights, and present the results in a simple dashboard or report.
 Objective
 Create an end-to-end solution that converts raw financial transaction data into meaningful personal finance insights.

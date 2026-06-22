@@ -1,4 +1,4 @@
-RupeeRadar
+MoneyFlow
 
 Background
 
@@ -12,7 +12,7 @@ because transaction descriptions are messy, inconsistent, and hard to categorize
 
 Challenge
 
-Build RupeeRadar, an AI-powered personal finance assistant that helps users understand
+Build MoneyFlow, an AI-powered personal finance assistant that helps users understand
 
 where their money is going by analyzing their bank statement data.
 

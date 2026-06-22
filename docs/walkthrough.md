@@ -1,26 +1,26 @@
 # Phase 1 Walkthrough: Vertical Slice MVP
 
-We have successfully completed all Phase 1 tasks for **RupeeRadar**. The application now features an end-to-end working pipeline where users can upload bank CSV statements, view cleaned transactions, and explore basic financial metrics.
+We have successfully completed all Phase 1 tasks for **MoneyFlow**. The application now features an end-to-end working pipeline where users can upload bank CSV statements, view cleaned transactions, and explore basic financial metrics.
 
 ## Changes Made
 
 ### 1. Backend: Date Parsing Correctness
-- Fixed the date parsing logic in [csv_parser.py](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/backend/app/parsers/csv_parser.py) by specifying `dayfirst=True` within the pandas `to_datetime` function.
+- Fixed the date parsing logic in [csv_parser.py](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/backend/app/parsers/csv_parser.py) by specifying `dayfirst=True` within the pandas `to_datetime` function.
 - This ensures Indian date formats like `09/06/26` are correctly parsed as `2026-06-09` (June 9th) rather than `2026-09-06` (September 6th).
 
 ### 2. Frontend: Vite Proxy Settings
-- Updated [vite.config.ts](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/frontend/vite.config.ts) to proxy `/api` calls directly to the FastAPI server at `http://localhost:8000` during development.
+- Updated [vite.config.ts](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/frontend/vite.config.ts) to proxy `/api` calls directly to the FastAPI server at `http://localhost:8000` during development.
 
 ### 3. Frontend: App & Styles Scaffolding
-- Overwrote [App.tsx](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/frontend/src/App.tsx) with a highly polished dark-theme finance interface featuring:
+- Overwrote [App.tsx](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/frontend/src/App.tsx) with a highly polished dark-theme finance interface featuring:
   - Drag-and-drop landing page area.
   - simulated pipeline step indicator flow (Ingesting -> Parsing -> Categorizing -> Compiling).
   - Stat cards for total credits (Income), debits (Expenses), and net savings.
   - Insight cards summarizing biggest spending areas.
   - Fully searchable and category-filtered transaction ledger.
   - Interactive "Demo Statement" button containing preloaded HDFC CSV rows.
-- Re-scaffolded [index.css](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/frontend/src/index.css) to support Tailwind v4 configurations.
-- Added premium animations and custom scrollbars to [App.css](file:///c:/Users/varun/Desktop/Projects/RupeeRadar/frontend/src/App.css).
+- Re-scaffolded [index.css](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/frontend/src/index.css) to support Tailwind v4 configurations.
+- Added premium animations and custom scrollbars to [App.css](file:///c:/Users/varun/Desktop/Projects/MoneyFlow/frontend/src/App.css).
 
 ---
 
@@ -29,7 +29,7 @@ We have successfully completed all Phase 1 tasks for **RupeeRadar**. The applica
 ### Automated Testing
 Running the pipeline verification script `verify_pipeline.py` ensures backend parsers, cleaners, categorizers, and metrics are functioning correctly with correct dates:
 ```
-Reading fixture from C:\Users\varun\Desktop\Projects\RupeeRadar\backend\tests\fixtures\sample_hdfc.csv...
+Reading fixture from C:\Users\varun\Desktop\Projects\MoneyFlow\backend\tests\fixtures\sample_hdfc.csv...
 Parsing CSV...
 Parsed 60 transactions.
 Cleaning transactions...

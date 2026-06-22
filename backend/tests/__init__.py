@@ -1,1 +1,1 @@
-"""Test package for RupeeRadar backend."""
+"""Test package for MoneyFlow💸🌊 backend."""

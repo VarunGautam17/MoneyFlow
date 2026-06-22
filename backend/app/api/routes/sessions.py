@@ -209,7 +209,7 @@ def get_report(
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="rupeeradar-report-{session_id[:8]}.pdf"'},
+            headers={"Content-Disposition": f'attachment; filename="moneyflow-report-{session_id[:8]}.pdf"'},
         )
 
     return Response(content=html, media_type="text/html")

@@ -1,1 +1,1 @@
-"""RupeeRadar backend application."""
+"""MoneyFlow💸🌊 backend application."""
