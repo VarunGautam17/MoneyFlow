@@ -7,7 +7,7 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: #09090b; /* Zinc 955/dark background */
+  background-color: #09090b; /* Zinc 950 dark background */
   color: #f4f4f5; /* Zinc 100 */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

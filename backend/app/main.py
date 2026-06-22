@@ -1,25 +1,38 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from . import models
-from .database import engine
-from .api.routes import upload, sessions
-from .config import settings
 
-models.Base.metadata.create_all(bind=engine)
+from app.api.routes import health, sessions, upload
+from app.config import get_settings
+from app.db import init_db
 
-app = FastAPI(title="RupeeRadar API")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db()
+    yield
 
-app.include_router(upload.router, prefix="/api/v1", tags=["Upload"])
-app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["Sessions"])
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to RupeeRadar API"}
+def create_app() -> FastAPI:
+    settings = get_settings()
+    app = FastAPI(
+        title="RupeeRadar API",
+        description="AI-powered personal finance assistant for Indian bank statements",
+        version="0.1.0",
+        lifespan=lifespan,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    app.include_router(health.router, prefix="/api/v1")
+    app.include_router(upload.router, prefix="/api/v1")
+    app.include_router(sessions.router, prefix="/api/v1")
+    return app
+
+
+app = create_app()

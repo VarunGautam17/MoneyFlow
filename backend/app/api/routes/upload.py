@@ -1,150 +1,69 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, BackgroundTasks
+import json
+import os
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
-from typing import List
-from ...database import get_db
-from ... import models, schemas
-from ...parsers.csv_parser import parse_generic_csv, parse_csv_with_mapping, preview_csv
-from ...parsers.bank_presets import get_all_bank_presets, get_bank_preset
-from ...pipeline.cleaner import process_cleaning
-from ...pipeline.categorizer import process_categorization
-from ...pipeline.metrics import calculate_metrics
-from ...pipeline.recurring import detect_recurring_groups
-from ...config import settings
 
-router = APIRouter()
+from app.config import get_settings
+from app.db import get_db
+from app.models import UploadSession
+from app.models.enums import SessionStatus
+from app.schemas.session import SessionResponse, UploadResponse, ColumnMapping, CsvPreview, BankPreset
+from app.services.pipeline import delete_upload_temp, run_pipeline, save_upload_temp
 
-def process_upload_task(session_id: str, file_content: bytes, filename: str, db: Session, column_mapping: schemas.ColumnMapping = None, header_row: int = 0):
-    session = db.query(models.UploadSession).filter(models.UploadSession.id == session_id).first()
-    if not session:
-        return
-        
-    try:
-        session.status = models.SessionStatus.parsing
-        db.commit()
-        
-        # Parse
-        if column_mapping:
-            raw_txns = parse_csv_with_mapping(file_content, column_mapping, header_row)
-        else:
-            raw_txns = parse_generic_csv(file_content)
-        
-        session.status = models.SessionStatus.processing
-        db.commit()
-        
-        # Clean
-        cleaned_txns = process_cleaning(raw_txns)
-        
-        # Categorize
-        categorized_txns = process_categorization(cleaned_txns)
-        
-        # Detect recurring payments
-        recurring_groups = detect_recurring_groups(categorized_txns)
-        
-        # Calculate metrics
-        metrics_data = calculate_metrics(categorized_txns, recurring_groups)
-        
-        # Save recurring groups to DB
-        db_groups = []
-        for group in recurring_groups:
-            db_group = models.RecurringGroup(
-                id=group["id"],
-                session_id=session.id,
-                name=group["name"],
-                typical_amount=group["typical_amount"],
-                frequency=group["frequency"],
-                confidence=group["confidence"],
-                category=group["category"]
-            )
-            db_groups.append(db_group)
-        db.add_all(db_groups)
-        
-        # Save transactions to DB
-        db_txns = []
-        for txn in categorized_txns:
-            db_txn = models.Transaction(
-                session_id=session.id,
-                date=txn.date,
-                description_raw=txn.description_raw,
-                description_clean=txn.description_clean,
-                amount=txn.amount,
-                type=txn.type,
-                balance=txn.balance,
-                category=txn.category,
-                category_confidence=txn.category_confidence,
-                is_recurring=txn.is_recurring,
-                recurring_group_id=txn.recurring_group_id,
-                metadata_json=txn.metadata_json
-            )
-            db_txns.append(db_txn)
-            
-        db.add_all(db_txns)
-        
-        # Save metrics
-        analysis_result = models.AnalysisResult(
-            session_id=session.id,
-            metrics=metrics_data["metrics"],
-            top_categories=metrics_data["top_categories"],
-            biggest_transactions=metrics_data["biggest_transactions"],
-            insights=metrics_data["insights"]
-        )
-        db.add(analysis_result)
-        
-        session.status = models.SessionStatus.ready
-        db.commit()
-        
-    except Exception as e:
-        session.status = models.SessionStatus.failed
-        session.error_message = str(e)
-        db.commit()
+router = APIRouter(tags=["upload"])
+
+ALLOWED_EXTENSIONS = {".csv", ".xlsx"}
 
 
-@router.post("/upload", response_model=schemas.UploadSession)
+@router.post("/upload", response_model=UploadResponse)
 async def upload_statement(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
-    if not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="Only CSV files are supported for now")
-        
-    content = await file.read()
-    
-    # Enforce size limit
-    max_size_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
-    if len(content) > max_size_bytes:
+    db: Session = Depends(get_db),
+) -> UploadResponse:
+    settings = get_settings()
+    filename = file.filename or "statement.csv"
+    ext = Path(filename).suffix.lower()
+
+    if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"File size exceeds the limit of {settings.MAX_UPLOAD_SIZE_MB}MB"
+            detail=(
+                "Unsupported file type. Upload HDFC/ICICI CSV, a generic CSV, or Excel (.xlsx). "
+                "See docs/sample-statement-template.csv for the expected format."
+            ),
         )
-        
-    from datetime import datetime, timedelta
-    
-    # Clean up expired sessions
-    try:
-        expired = db.query(models.UploadSession).filter(models.UploadSession.expires_at < datetime.utcnow()).all()
-        for exp in expired:
-            db.delete(exp)
-        db.commit()
-    except Exception:
-        db.rollback()
-        
-    session = models.UploadSession(
-        filename=file.filename,
-        file_type="csv",
-        expires_at=datetime.utcnow() + timedelta(hours=settings.SESSION_TTL_HOURS)
+
+    content = await file.read()
+    if len(content) > settings.max_upload_size_bytes:
+        raise HTTPException(status_code=413, detail=f"File exceeds {settings.max_upload_size_mb} MB limit")
+
+    session = UploadSession(
+        filename=filename,
+        file_type=ext.lstrip("."),
+        status=SessionStatus.PENDING.value,
     )
     db.add(session)
     db.commit()
     db.refresh(session)
-    
-    # Process synchronously for prototype
-    process_upload_task(session.id, content, file.filename, db)
-    
+
+    temp_path: str | None = None
+    try:
+        temp_path = save_upload_temp(content, filename)
+        run_pipeline(db, session, content, filename)
+    finally:
+        if temp_path:
+            delete_upload_temp(temp_path)
+
     db.refresh(session)
-    return session
+    if session.status == SessionStatus.FAILED.value:
+        raise HTTPException(status_code=422, detail=session.error_message or "Failed to process statement")
+
+    return UploadResponse(session_id=session.id, status=session.status)
 
 
-@router.post("/upload/preview", response_model=schemas.CsvPreview)
+@router.post("/upload/preview", response_model=CsvPreview)
 async def preview_csv_file(file: UploadFile = File(...)):
     """Preview CSV file and suggest column mapping."""
     if not file.filename.endswith('.csv'):
@@ -153,70 +72,74 @@ async def preview_csv_file(file: UploadFile = File(...)):
     content = await file.read()
     
     try:
+        from app.parsers.csv_parser import preview_csv
         preview_data = preview_csv(content)
-        return schemas.CsvPreview(**preview_data)
+        return CsvPreview(**preview_data)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to preview CSV: {str(e)}")
 
 
-@router.get("/upload/bank-presets", response_model=List[schemas.BankPreset])
+@router.get("/upload/bank-presets", response_model=list[BankPreset])
 async def get_bank_presets():
     """Get all available bank presets."""
+    from app.parsers.bank_presets import get_all_bank_presets
     return get_all_bank_presets()
 
 
-@router.post("/upload/upload-with-mapping", response_model=schemas.UploadSession)
+@router.post("/upload/upload-with-mapping", response_model=UploadResponse)
 async def upload_statement_with_mapping(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    column_mapping: schemas.ColumnMapping = None,
-    header_row: int = 0,
-    bank_code: str = None,
+    column_mapping: str = Form(None),
+    header_row: int = Form(0),
+    bank_code: str = Form(None),
     db: Session = Depends(get_db)
-):
+) -> UploadResponse:
     """Upload CSV statement with explicit column mapping."""
-    if not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="Only CSV files are supported for now")
+    settings = get_settings()
+    filename = file.filename or "statement.csv"
+    ext = Path(filename).suffix.lower()
+    
+    if ext != '.csv':
+        raise HTTPException(status_code=400, detail="Only CSV files are supported for custom mapping")
         
     content = await file.read()
-    
-    # Enforce size limit
-    max_size_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
-    if len(content) > max_size_bytes:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File size exceeds the limit of {settings.MAX_UPLOAD_SIZE_MB}MB"
-        )
-    
-    # Use bank preset if provided
-    if bank_code:
+    if len(content) > settings.max_upload_size_bytes:
+        raise HTTPException(status_code=413, detail=f"File exceeds {settings.max_upload_size_mb} MB limit")
+        
+    mapping_obj = None
+    if column_mapping:
+        try:
+            mapping_dict = json.loads(column_mapping)
+            mapping_obj = ColumnMapping(**mapping_dict)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid column_mapping format")
+            
+    if bank_code and not mapping_obj:
+        from app.parsers.bank_presets import get_bank_preset
         preset = get_bank_preset(bank_code)
         if preset:
-            column_mapping = preset.column_mapping
-    
-    from datetime import datetime, timedelta
-    
-    # Clean up expired sessions
-    try:
-        expired = db.query(models.UploadSession).filter(models.UploadSession.expires_at < datetime.utcnow()).all()
-        for exp in expired:
-            db.delete(exp)
-        db.commit()
-    except Exception:
-        db.rollback()
-        
-    session = models.UploadSession(
-        filename=file.filename,
+            mapping_obj = preset.column_mapping
+            
+    session = UploadSession(
+        filename=filename,
         file_type="csv",
         bank_hint=bank_code,
-        expires_at=datetime.utcnow() + timedelta(hours=settings.SESSION_TTL_HOURS)
+        status=SessionStatus.PENDING.value,
     )
     db.add(session)
     db.commit()
     db.refresh(session)
     
-    # Process synchronously for prototype
-    process_upload_task(session.id, content, file.filename, db, column_mapping, header_row)
-    
+    temp_path = None
+    try:
+        temp_path = save_upload_temp(content, filename)
+        run_pipeline(db, session, content, filename, column_mapping=mapping_obj, header_row=header_row)
+    finally:
+        if temp_path:
+            delete_upload_temp(temp_path)
+            
     db.refresh(session)
-    return session
+    if session.status == SessionStatus.FAILED.value:
+        raise HTTPException(status_code=422, detail=session.error_message or "Failed to process statement")
+        
+    return UploadResponse(session_id=session.id, status=session.status)

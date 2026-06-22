@@ -1,90 +1,110 @@
-from typing import List, Dict, Any
-from ..schemas import TransactionBase
+from dataclasses import dataclass
+from datetime import date
 
-def calculate_metrics(transactions: List[Any], recurring_groups: List[Any] = None) -> Dict[str, Any]:
-    if recurring_groups is None:
-        recurring_groups = []
-        
-    income = sum(t.amount for t in transactions if t.amount > 0)
-    spend = sum(abs(t.amount) for t in transactions if t.amount < 0)
+from app.models.enums import Category
+from app.pipeline.cleaner import CleanedTransaction
+from app.pipeline.recurring import RecurringGroupResult
+
+
+@dataclass
+class CategoryTotal:
+    category: str
+    amount: float
+    count: int
+
+
+@dataclass
+class BiggestTransaction:
+    id: str
+    date: str
+    description_clean: str
+    amount: float
+    category: str
+
+
+@dataclass
+class MonthlySpend:
+    month: str
+    amount: float
+
+
+@dataclass
+class MetricsResult:
+    total_income: float
+    total_spend: float
+    savings: float
+    savings_rate: float | None
+    top_categories: list[CategoryTotal]
+    biggest_debit: BiggestTransaction | None
+    transaction_count: int
+    period_start: str | None
+    period_end: str | None
+    monthly_spend: list[MonthlySpend]
+    recurring_total_monthly: float
+
+
+def compute_metrics(
+    transactions: list[tuple[str, CleanedTransaction, Category, float]],
+    recurring_groups: list[RecurringGroupResult] | None = None,
+) -> MetricsResult:
+    income = sum(txn.amount for _, txn, _, _ in transactions if txn.amount > 0)
+    spend = sum(abs(txn.amount) for _, txn, _, _ in transactions if txn.amount < 0)
     savings = income - spend
-    savings_rate = (savings / income * 100) if income > 0 else 0.0
+    savings_rate = round((savings / income) * 100, 1) if income > 0 else None
 
-    # Top categories
-    category_spend = {}
-    for t in transactions:
-        if t.amount < 0:
-            cat = t.category or "Other"
-            category_spend[cat] = category_spend.get(cat, 0.0) + abs(t.amount)
-            
-    top_categories = [{"category": k, "amount": v} for k, v in sorted(category_spend.items(), key=lambda item: item[1], reverse=True)]
-    
-    # Biggest transactions
-    debits = [t for t in transactions if t.amount < 0]
-    biggest_transactions = []
+    category_totals: dict[str, CategoryTotal] = {}
+    monthly_totals: dict[str, float] = {}
+
+    for _, txn, category, _ in transactions:
+        if txn.amount < 0:
+            cat = category.value
+            amount = abs(txn.amount)
+            if cat not in category_totals:
+                category_totals[cat] = CategoryTotal(category=cat, amount=0.0, count=0)
+            category_totals[cat].amount += amount
+            category_totals[cat].count += 1
+
+            month_key = txn.date[:7]
+            monthly_totals[month_key] = monthly_totals.get(month_key, 0.0) + amount
+
+    top_categories = sorted(category_totals.values(), key=lambda c: c.amount, reverse=True)
+    monthly_spend = [
+        MonthlySpend(month=m, amount=round(monthly_totals[m], 2))
+        for m in sorted(monthly_totals.keys())
+    ]
+
+    debits = [(tid, txn, cat) for tid, txn, cat, _ in transactions if txn.amount < 0]
+    biggest: BiggestTransaction | None = None
     if debits:
-        biggest_txn = min(debits, key=lambda t: t.amount)
-        biggest_transactions.append({
-            "description": biggest_txn.description_clean or biggest_txn.description_raw,
-            "amount": abs(biggest_txn.amount),
-            "date": biggest_txn.date
-        })
-
-    # Recurring calculations
-    def get_typical_amount(g):
-        if isinstance(g, dict):
-            return g["typical_amount"]
-        return getattr(g, "typical_amount", 0.0)
-        
-    recurring_total = sum(get_typical_amount(g) for g in recurring_groups)
-
-    # Monthly spend aggregation
-    monthly_spend_map = {}
-    for t in transactions:
-        if t.amount < 0:
-            month = t.date[:7]
-            monthly_spend_map[month] = monthly_spend_map.get(month, 0.0) + abs(t.amount)
-            
-    monthly_spend = [{"month": k, "spend": round(v, 2)} for k, v in sorted(monthly_spend_map.items())]
-
-    # Basic Insights
-    insights = []
-    if top_categories:
-        top_cat = top_categories[0]
-        insights.append(f"You spent ₹{top_cat['amount']:,.2f} on {top_cat['category']} this month — your largest category.")
-    if biggest_transactions:
-        biggest = biggest_transactions[0]
-        insights.append(f"Your biggest transaction was ₹{biggest['amount']:,.2f} to {biggest['description']} on {biggest['date']}.")
-    if recurring_groups:
-        insights.append(f"{len(recurring_groups)} recurring payments totalling ₹{recurring_total:,.2f}/month")
-        
-    try:
-        from ..services.llm import generate_narrative_insights_llm
-        llm_insights = generate_narrative_insights_llm(
-            income=income,
-            spend=spend,
-            savings=savings,
-            savings_rate=savings_rate,
-            top_categories=top_categories,
-            biggest_transactions=biggest_transactions,
-            recurring_groups=recurring_groups
+        tid, txn, cat = max(debits, key=lambda x: abs(x[1].amount))
+        biggest = BiggestTransaction(
+            id=tid,
+            date=txn.date,
+            description_clean=txn.description_clean,
+            amount=abs(txn.amount),
+            category=cat.value,
         )
-        if llm_insights:
-            insights.extend(llm_insights)
-    except Exception:
-        pass
-        
-    return {
-        "metrics": {
-            "income": income,
-            "spend": spend,
-            "savings": savings,
-            "savings_rate": savings_rate,
-            "recurring_total": recurring_total,
-            "monthly_spend": monthly_spend
-        },
-        "top_categories": top_categories[:5], # top 5
-        "biggest_transactions": biggest_transactions,
-        "insights": insights
-    }
 
+    dates = [date.fromisoformat(txn.date) for _, txn, _, _ in transactions if txn.date]
+    period_start = min(dates).isoformat() if dates else None
+    period_end = max(dates).isoformat() if dates else None
+
+    recurring_total = 0.0
+    if recurring_groups:
+        recurring_total = sum(
+            g.typical_amount for g in recurring_groups if g.frequency == "monthly"
+        )
+
+    return MetricsResult(
+        total_income=round(income, 2),
+        total_spend=round(spend, 2),
+        savings=round(savings, 2),
+        savings_rate=savings_rate,
+        top_categories=top_categories,
+        biggest_debit=biggest,
+        transaction_count=len(transactions),
+        period_start=period_start,
+        period_end=period_end,
+        monthly_spend=monthly_spend,
+        recurring_total_monthly=round(recurring_total, 2),
+    )

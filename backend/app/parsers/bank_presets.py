@@ -1,4 +1,4 @@
-from ..schemas import BankPreset, ColumnMapping
+from app.schemas.session import BankPreset, ColumnMapping
 
 # Common Indian bank presets
 BANK_PRESETS: list[BankPreset] = [

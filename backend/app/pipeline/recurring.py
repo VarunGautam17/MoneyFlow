@@ -1,98 +1,171 @@
+import json
+import re
 import uuid
-import difflib
-from datetime import datetime
-from typing import List, Dict, Any
+from dataclasses import dataclass
+from datetime import date
+from difflib import SequenceMatcher
+from statistics import median
 
-def get_similarity(s1: str, s2: str) -> float:
-    if not s1 or not s2:
-        return 0.0
-    return difflib.SequenceMatcher(None, s1, s2).ratio()
+from app.models.enums import Category
+from app.pipeline.cleaner import CleanedTransaction
 
-def detect_recurring_groups(transactions: List[Any]) -> List[Dict[str, Any]]:
-    # 1. Filter out only debits (amount < 0) and exclude non-recurring categories (Food, Travel, Shopping)
-    EXCLUDED_CATEGORIES = {"Food", "Travel", "Shopping"}
-    debits = [
-        t for t in transactions 
-        if t.amount < 0 and (t.category not in EXCLUDED_CATEGORIES)
-    ]
-    if not debits:
-        return []
-        
-    # 2. Group transactions into clusters of similar cleaned descriptions
-    clusters: List[List[Any]] = []
-    for txn in debits:
-        desc = txn.description_clean or txn.description_raw or ""
-        matched = False
-        for cluster in clusters:
-            first_desc = cluster[0].description_clean or cluster[0].description_raw or ""
-            if get_similarity(desc, first_desc) >= 0.6:
-                cluster.append(txn)
-                matched = True
-                break
-        if not matched:
-            clusters.append([txn])
-            
-    detected_groups = []
-    
-    # 3. Analyze each cluster to see if there's a recurring pattern
-    for cluster in clusters:
-        if len(cluster) < 2:
+MONTHLY_MIN_DAYS = 28
+MONTHLY_MAX_DAYS = 32
+AMOUNT_TOLERANCE = 0.05
+MIN_OCCURRENCES = 2
+SIMILARITY_THRESHOLD = 0.55
+
+
+@dataclass
+class RecurringGroupResult:
+    id: str
+    label: str
+    category: str
+    frequency: str
+    typical_amount: float
+    last_seen_date: str
+    transaction_ids: list[str]
+    confidence: float
+
+
+def _tokens(text: str) -> set[str]:
+    return {t for t in re.split(r"\W+", text.upper()) if len(t) > 1}
+
+
+def _similarity(a: str, b: str) -> float:
+    if a == b:
+        return 1.0
+    ta, tb = _tokens(a), _tokens(b)
+    if ta and tb:
+        jaccard = len(ta & tb) / len(ta | tb)
+        if jaccard >= SIMILARITY_THRESHOLD:
+            return jaccard
+    return SequenceMatcher(None, a.upper(), b.upper()).ratio()
+
+
+def _group_key(txn: CleanedTransaction) -> str:
+    if txn.merchant:
+        return txn.merchant.upper()
+    return txn.description_clean.upper()
+
+
+def _amounts_compatible(amounts: list[float]) -> bool:
+    if len(amounts) < 2:
+        return True
+    med = median(amounts)
+    if med == 0:
+        return False
+    return all(abs(a - med) / med <= AMOUNT_TOLERANCE for a in amounts)
+
+
+def _detect_frequency(dates: list[date]) -> tuple[str, float]:
+    if len(dates) < 2:
+        return "unknown", 0.0
+
+    intervals = [(dates[i + 1] - dates[i]).days for i in range(len(dates) - 1)]
+    monthly = sum(1 for d in intervals if MONTHLY_MIN_DAYS <= d <= MONTHLY_MAX_DAYS)
+    ratio = monthly / len(intervals)
+
+    if ratio >= 0.5:
+        base = 0.45 + 0.12 * len(dates)
+        return "monthly", min(0.95, base + 0.25 * ratio)
+
+    weekly = sum(1 for d in intervals if 6 <= d <= 8)
+    if weekly / len(intervals) >= 0.5:
+        return "weekly", min(0.85, 0.4 + 0.1 * len(dates))
+
+    return "unknown", 0.3
+
+
+def _infer_category(label: str, txn_category: str) -> str:
+    upper = label.upper()
+    if re.search(r"\b(EMI|HOME LOAN)\b", upper):
+        return Category.EMI.value
+    if re.search(r"\b(SIP|ZERODHA|GROWW)\b", upper):
+        return Category.INVESTMENTS.value
+    if re.search(r"\b(NETFLIX|SPOTIFY|YOUTUBE|PRIME|SUBSCRIPTION)\b", upper):
+        return Category.SUBSCRIPTIONS.value
+    if re.search(r"\b(RENT|NOBROKER)\b", upper):
+        return Category.RENT.value
+    return txn_category
+
+
+def _cluster_transactions(
+    items: list[tuple[str, CleanedTransaction, Category, float]],
+) -> list[list[tuple[str, CleanedTransaction, Category, float]]]:
+    """Greedy clustering by description similarity."""
+    clusters: list[list[tuple[str, CleanedTransaction, Category, float]]] = []
+    used: set[int] = set()
+
+    for i, item in enumerate(items):
+        if i in used:
             continue
-            
-        # Sort by date
-        sorted_txns = sorted(cluster, key=lambda t: t.date)
-        
-        matching_indices = set()
-        for i in range(len(sorted_txns)):
-            date_i = datetime.strptime(sorted_txns[i].date, "%Y-%m-%d")
-            amt_i = abs(sorted_txns[i].amount)
-            for j in range(i + 1, len(sorted_txns)):
-                date_j = datetime.strptime(sorted_txns[j].date, "%Y-%m-%d")
-                amt_j = abs(sorted_txns[j].amount)
-                
-                days = (date_j - date_i).days
-                amt_diff = abs(amt_i - amt_j) / max(amt_i, amt_j) if max(amt_i, amt_j) > 0 else 0.0
-                
-                # Check monthly interval (~25-35 days) and amount tolerance (5%)
-                if 25 <= days <= 35 and amt_diff <= 0.05:
-                    matching_indices.add(i)
-                    matching_indices.add(j)
-                    
-        if len(matching_indices) >= 2:
-            matched_txns = [sorted_txns[idx] for idx in sorted(list(matching_indices))]
-            
-            # Generate UUID for this group
-            group_id = str(uuid.uuid4())
-            
-            # Mark the transactions
-            for txn in matched_txns:
-                txn.is_recurring = True
-                txn.recurring_group_id = group_id
-                
-            # Calculate typical amount
-            typical_amount = sum(abs(t.amount) for t in matched_txns) / len(matched_txns)
-            
-            # Derive name
-            raw_name = matched_txns[0].description_clean or matched_txns[0].description_raw or "Recurring Payment"
-            name_parts = [p.capitalize() for p in raw_name.split() if p]
-            name = " ".join(name_parts)
-            
-            # Category is the most frequent category among matched transactions
-            categories = [t.category for t in matched_txns if t.category]
-            category = max(set(categories), key=categories.count) if categories else "Other"
-            
-            # Confidence score
-            confidence = 0.80 if len(matched_txns) == 2 else 0.95
-            
-            group_data = {
-                "id": group_id,
-                "name": name,
-                "typical_amount": round(typical_amount, 2),
-                "frequency": "monthly",
-                "confidence": confidence,
-                "category": category,
-                "transactions": matched_txns
-            }
-            detected_groups.append(group_data)
-            
-    return detected_groups
+        cluster = [item]
+        used.add(i)
+        key_i = _group_key(item[1])
+
+        for j, other in enumerate(items):
+            if j in used or i == j:
+                continue
+            key_j = _group_key(other[1])
+            if _similarity(key_i, key_j) >= SIMILARITY_THRESHOLD:
+                cluster.append(other)
+                used.add(j)
+
+        clusters.append(cluster)
+
+    return clusters
+
+
+def detect_recurring(
+    transactions: list[tuple[str, CleanedTransaction, Category, float]],
+) -> list[RecurringGroupResult]:
+    """Detect recurring payment groups from debit transactions."""
+    debits = [(tid, txn, cat, conf) for tid, txn, cat, conf in transactions if txn.amount < 0]
+    if len(debits) < MIN_OCCURRENCES:
+        return []
+
+    clusters = _cluster_transactions(debits)
+    groups: list[RecurringGroupResult] = []
+
+    for cluster in clusters:
+        if len(cluster) < MIN_OCCURRENCES:
+            continue
+
+        amounts = [abs(txn.amount) for _, txn, _, _ in cluster]
+        if not _amounts_compatible(amounts):
+            continue
+
+        dated = sorted(
+            [(tid, txn, cat) for tid, txn, cat, _ in cluster],
+            key=lambda x: date.fromisoformat(x[1].date),
+        )
+        dates = [date.fromisoformat(txn.date) for _, txn, _ in dated]
+        frequency, freq_confidence = _detect_frequency(dates)
+        if frequency == "unknown":
+            continue
+
+        label = dated[0][1].merchant or dated[0][1].description_clean
+        if label and len(label.split()) == 1 and len(dated[0][1].description_clean) > len(label):
+            label = dated[0][1].description_clean
+        category = _infer_category(label, dated[0][2].value)
+        typical = round(median(amounts), 2)
+        last_date = dates[-1].isoformat()
+        txn_ids = [tid for tid, _, _ in dated]
+
+        confidence = round(min(0.95, freq_confidence + 0.05 * (len(cluster) - 2)), 2)
+
+        groups.append(
+            RecurringGroupResult(
+                id=str(uuid.uuid4()),
+                label=label,
+                category=category,
+                frequency=frequency,
+                typical_amount=typical,
+                last_seen_date=last_date,
+                transaction_ids=txn_ids,
+                confidence=confidence,
+            )
+        )
+
+    return groups

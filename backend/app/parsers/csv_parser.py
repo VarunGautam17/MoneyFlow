@@ -3,7 +3,9 @@ import io
 import math
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from ..schemas import TransactionBase, TransactionType, ColumnMapping
+from app.parsers.base import RawTransaction
+from app.models.enums import TransactionType
+from app.schemas.session import ColumnMapping
 
 def find_header_row_index(file_content: bytes) -> int:
     try:
@@ -59,7 +61,7 @@ def parse_generic_csv(file_content: bytes) -> List[TransactionBase]:
         desc_raw = str(row[desc_col]).strip()
         
         amount = 0.0
-        txn_type = TransactionType.debit
+        txn_type = TransactionType.DEBIT
         
         # Determine amount and type based on available columns
         if credit_col and debit_col:
@@ -78,10 +80,10 @@ def parse_generic_csv(file_content: bytes) -> List[TransactionBase]:
             
             if c_amt > 0:
                 amount = c_amt
-                txn_type = TransactionType.credit
+                txn_type = TransactionType.CREDIT
             elif d_amt > 0:
                 amount = -d_amt
-                txn_type = TransactionType.debit
+                txn_type = TransactionType.DEBIT
         elif amount_col:
             amount_val = row.get(amount_col)
             if not pd.isna(amount_val):
@@ -91,14 +93,14 @@ def parse_generic_csv(file_content: bytes) -> List[TransactionBase]:
                     amount = 0.0
                     
                 if amount >= 0:
-                    txn_type = TransactionType.credit
+                    txn_type = TransactionType.CREDIT
                 else:
-                    txn_type = TransactionType.debit
+                    txn_type = TransactionType.DEBIT
 
         if amount == 0.0:
             continue
             
-        transactions.append(TransactionBase(
+        transactions.append(RawTransaction(
             date=parsed_date_str,
             description_raw=desc_raw,
             amount=amount,
@@ -260,7 +262,7 @@ def parse_csv_with_mapping(file_content: bytes, column_mapping: ColumnMapping, h
         desc_raw = str(row[desc_col]).strip()
         
         amount = 0.0
-        txn_type = TransactionType.debit
+        txn_type = TransactionType.DEBIT
         balance_val = None
         
         # Determine amount and type based on available columns
@@ -280,10 +282,10 @@ def parse_csv_with_mapping(file_content: bytes, column_mapping: ColumnMapping, h
             
             if c_amt > 0:
                 amount = c_amt
-                txn_type = TransactionType.credit
+                txn_type = TransactionType.CREDIT
             elif d_amt > 0:
                 amount = -d_amt
-                txn_type = TransactionType.debit
+                txn_type = TransactionType.DEBIT
         elif amount_col:
             amount_val = row.get(amount_col)
             if not pd.isna(amount_val):
@@ -293,9 +295,9 @@ def parse_csv_with_mapping(file_content: bytes, column_mapping: ColumnMapping, h
                     amount = 0.0
                     
                 if amount >= 0:
-                    txn_type = TransactionType.credit
+                    txn_type = TransactionType.CREDIT
                 else:
-                    txn_type = TransactionType.debit
+                    txn_type = TransactionType.DEBIT
         
         # Get balance if available
         if balance_col:
@@ -309,7 +311,7 @@ def parse_csv_with_mapping(file_content: bytes, column_mapping: ColumnMapping, h
         if amount == 0.0:
             continue
             
-        transactions.append(TransactionBase(
+        transactions.append(RawTransaction(
             date=parsed_date_str,
             description_raw=desc_raw,
             amount=amount,

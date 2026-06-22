@@ -1,38 +1,44 @@
-# Version control ignore rules for RupeeRadar
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
-# Environments and Secrets
+# Environment
 .env
 .env.local
-.env.*.local
-*.env
 
-# Python Virtual Environment
-backend/venv/
-backend/.venv/
-venv/
-.venv/
-__pycache__/
-*.pyc
-
-# Node / JS Dependencies
-node_modules/
-frontend/node_modules/
-dist/
-frontend/dist/
-
-# Local Databases
+# Database (runtime SQLite directory — not app merchant data)
+backend/data/
 *.db
-backend/*.db
-rupeeradar.db
-backend/rupeeradar.db
+*.sqlite3
 
-# IDEs and System Files
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE
 .idea/
 .vscode/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
 *.swp
 .DS_Store
-Thumbs.db
+
+# Docker
+*.log
+
+# Uploads (runtime)
+uploads/
+tmp/
