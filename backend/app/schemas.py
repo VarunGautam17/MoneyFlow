@@ -70,3 +70,25 @@ class AnalysisResult(AnalysisResultBase):
 class TransactionUpdate(BaseModel):
     category: str
 
+class ColumnMapping(BaseModel):
+    date: Optional[str] = None
+    description: Optional[str] = None
+    debit: Optional[str] = None
+    credit: Optional[str] = None
+    amount: Optional[str] = None
+    balance: Optional[str] = None
+
+class CsvPreview(BaseModel):
+    columns: List[str]
+    sample_rows: List[Dict[str, Any]]
+    suggested_mapping: ColumnMapping
+    header_row: int
+    confidence_score: float
+    auto_process: bool
+
+class BankPreset(BaseModel):
+    name: str
+    code: str
+    column_mapping: ColumnMapping
+    date_format: Optional[str] = None
+

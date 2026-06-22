@@ -64,6 +64,25 @@ interface UploadSession {
   file_type: string;
   status: 'pending' | 'parsing' | 'processing' | 'ready' | 'failed';
   error_message: string | null;
+  bank_hint: string | null;
+}
+
+interface ColumnMapping {
+  date: string | null;
+  description: string | null;
+  debit: string | null;
+  credit: string | null;
+  amount: string | null;
+  balance: string | null;
+}
+
+interface CsvPreview {
+  columns: string[];
+  sample_rows: Record<string, any>[];
+  suggested_mapping: ColumnMapping;
+  header_row: number;
+  confidence_score: number;
+  auto_process: boolean;
 }
 
 
@@ -139,6 +158,11 @@ function App() {
   const [recurringGroups, setRecurringGroups] = useState<RecurringGroup[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Column mapping state (kept for auto-detection)
+  const [csvPreview, setCsvPreview] = useState<CsvPreview | null>(null);
+  const [columnMapping, setColumnMapping] = useState<ColumnMapping | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   // Navigation State
   const [activeTab, setActiveTab] = useState<'summary' | 'transactions' | 'recurring' | 'insights'>('summary');
 
@@ -149,6 +173,101 @@ function App() {
   const [showThisMonthOnly, setShowThisMonthOnly] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePreviewFile = async (file: File) => {
+    setSelectedFile(file);
+    setErrorMsg(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/v1/upload/preview', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to preview CSV');
+      }
+
+      const previewData = await response.json();
+      setCsvPreview(previewData);
+      setColumnMapping(previewData.suggested_mapping);
+      
+      // Always auto-process with AI detection
+      await handleUploadWithMapping();
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'Failed to preview CSV');
+      setViewState('error');
+    }
+  };
+
+  const handleUploadWithMapping = async () => {
+    if (!selectedFile || !columnMapping) return;
+
+    setViewState('uploading');
+    setUploadStep(0);
+    setErrorMsg(null);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setUploadStep(1);
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      
+      // Add column mapping as JSON
+      formData.append('column_mapping', JSON.stringify(columnMapping));
+      formData.append('header_row', String(csvPreview?.header_row || 0));
+
+      const response = await fetch('/api/v1/upload/upload-with-mapping', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || `Server error: ${response.statusText}`);
+      }
+
+      const sessionData = await response.json();
+      setSession(sessionData);
+
+      // Continue with the rest of the processing flow
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setUploadStep(2);
+
+      const txResponse = await fetch(`/api/v1/sessions/${sessionData.id}/transactions`);
+      if (!txResponse.ok) throw new Error('Failed to retrieve transactions.');
+      const txData = await txResponse.json();
+
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setUploadStep(3);
+
+      const analyticsResponse = await fetch(`/api/v1/sessions/${sessionData.id}/analytics`);
+      if (!analyticsResponse.ok) throw new Error('Failed to retrieve analytics.');
+      const analyticsData = await analyticsResponse.json();
+
+      const recResponse = await fetch(`/api/v1/sessions/${sessionData.id}/recurring`);
+      if (!recResponse.ok) throw new Error('Failed to retrieve recurring payments.');
+      const recData = await recResponse.json();
+
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      setTransactions(txData);
+      setAnalytics(analyticsData);
+      setRecurringGroups(recData);
+      setActiveTab('summary');
+      setViewState('ready');
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || 'An unexpected error occurred during processing.');
+      setViewState('error');
+    }
+  };
 
 
   // Helper to format currency in INR style
@@ -241,7 +360,7 @@ function App() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      startLoadingSequence(e.target.files[0]);
+      handlePreviewFile(e.target.files[0]);
     }
   };
 
@@ -255,7 +374,7 @@ function App() {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
       if (file.name.endsWith('.csv')) {
-        startLoadingSequence(file);
+        handlePreviewFile(file);
       } else {
         setErrorMsg('Only CSV files are supported.');
         setViewState('error');
@@ -283,6 +402,9 @@ function App() {
     setCategoryFilter('all');
     setShowThisMonthOnly(false);
     setActiveTab('summary');
+    setCsvPreview(null);
+    setColumnMapping(null);
+    setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -466,8 +588,7 @@ function App() {
             <div
               onDragOver={handleDragOver}
               onDrop={handleDrop}
-              className="border-2 border-dashed border-zinc-800 hover:border-zinc-700 bg-zinc-900/30 rounded-3xl p-10 sm:p-14 cursor-pointer transition duration-300 relative group overflow-hidden animate-pulse-glow"
-              onClick={handleSelectFileClick}
+              className="border-2 border-dashed border-zinc-800 hover:border-zinc-700 bg-zinc-900/30 rounded-3xl p-10 sm:p-14 transition duration-300 relative group overflow-hidden animate-pulse-glow"
             >
               <input
                 type="file"
@@ -496,6 +617,7 @@ function App() {
 
                 <button
                   type="button"
+                  onClick={handleSelectFileClick}
                   className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 hover:shadow-[0_0_15px_rgba(99,102,241,0.4)] text-white transition duration-200 cursor-pointer"
                 >
                   Browse Files
